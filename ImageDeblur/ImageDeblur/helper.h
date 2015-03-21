@@ -28,6 +28,18 @@ public:
 	static void Sum(const cv::Mat src, 		            
 				    std::vector<double>& result,
 					const int flag = ROW_SUM);
+	static void MeshGrid(const int Xsize,
+		                 const int Ysize,
+						 cv::Mat&  XMat,
+						 cv::Mat&  YMat);
+	static void warpProjective2(const cv::Mat img,
+		                        const cv::Mat A,
+								cv::Mat& result);
+	static void warpimage(const cv::Mat img, 
+		                  const cv::Mat M,
+						  cv::Mat& warped);
+	static void adjust_psf_center(const cv::Mat kernel,
+		                          cv::Mat& adjusted);
 };
 
 #endif

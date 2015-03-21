@@ -120,6 +120,7 @@ void Helper::Sum(const cv::Mat src,
 			}
 			result.push_back(tmp_sum);
 		}
+		return;
 	}
 	/*col sum*/
 	if (flag == COL_SUM)
@@ -134,6 +135,7 @@ void Helper::Sum(const cv::Mat src,
 			}
 			result.push_back(tmp_sum);
 		}
+		return;
 	}
 	/*all sum*/
 	if (flag == ALL_SUM)
@@ -147,6 +149,7 @@ void Helper::Sum(const cv::Mat src,
 			}
 		}
 		result.push_back(tmp_sum);
+		return;
 	}
 }
 
@@ -167,4 +170,100 @@ void Helper::resizeKer(const double ret,
 		Helper::Sum(kernel, allsum, ALL_SUM);
 		kernel = kernel.mul(1.0/allsum[0]);
 	}
+}
+
+void Helper::MeshGrid(const int Xsize,
+	                  const int Ysize,
+					  cv::Mat&  XMat,
+					  cv::Mat&  YMat)
+{
+	if (!XMat.empty() || !YMat.empty()){
+		std::cout<< "you should input empty Xmat and Ymat"<<std::endl;
+		return;
+	}
+
+	XMat = cv::Mat::zeros(Ysize, Xsize, CV_64F);
+	YMat = cv::Mat::zeros(Ysize, Xsize, CV_64F);
+	for (int i = 0; i < Ysize; ++i)
+	{
+		for (int j = 0; j < Xsize; ++j)
+		{
+			XMat.at<double>(i,j) = j+1;
+			YMat.at<double>(i,j) = i+1;
+		}
+	}
+}
+
+void Helper::warpProjective2(const cv::Mat img,
+	                         cv::Mat A,
+	                         cv::Mat& result)
+{
+	if (A.rows > 2){
+		A = A(cv::Range(0,2), cv::Range(0,A.cols));
+	}
+	cv::Mat x,y;
+	Helper::MeshGrid(img.cols, img.rows, x, y);
+	cv::Mat homogeneousCoords = cv::Mat::zeros(3, x.rows*x.cols, CV_64F);
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < x.rows*x.cols; ++j)
+		{
+			if (i == 0){
+				homogeneousCoords.at<double>(i,j) = x.at<double>( (j)%x.cols, std::floor(double(j)/x.rows));
+			} 
+			if (i == 1){
+				homogeneousCoords.at<double>(i,j) = y.at<double>( (j)%y.cols, std::floor(double(j)/y.rows));
+			}
+			if (i == 2){
+				homogeneousCoords.at<double>(i,j) = 1.0;
+			}
+		}
+	}
+	/*------------------------*/
+	cv::Mat warpedCoords = A * homogeneousCoords;
+	cv::Mat xprime = cv::Mat::zeros(img.size(), CV_64F);// = warpedCoords(cv::Range(0,1),cv::Range(0,warpedCoords.cols));
+	cv::Mat yprime = cv::Mat::zeros(img.size(), CV_64F);// = warpedCoords(cv::Range(1,2),cv::Range(0,warpedCoords.cols));
+
+	for (int i = 0; i < warpedCoords.cols; ++i)
+	{
+		int R = (i)%img.cols;
+		int C = std::floor(double(i)/img.rows);
+		xprime.at<double>(R,C) = warpedCoords.at<double>(0, i);
+		yprime.at<double>(R,C) = warpedCoords.at<double>(1, i);
+	}
+
+	xprime.convertTo(xprime, CV_32F);
+	yprime.convertTo(yprime, CV_32F);
+	/*------------------------*/
+	cv::remap(img, result, yprime, xprime, CV_INTER_LINEAR,0,cv::Scalar(0,0,0));
+	cv::flip(result, result,2);
+	result = result.t();
+}
+
+void Helper::warpimage(const cv::Mat img, 
+	                   const cv::Mat M,
+	                   cv::Mat& warped)
+{
+	Helper::warpProjective2(img, M, warped);
+}
+
+void Helper::adjust_psf_center(const cv::Mat kernel,
+	                           cv::Mat& adjusted)
+{
+	cv::Mat X;
+	cv::Mat Y;
+	Helper::MeshGrid(kernel.cols, kernel.rows, X, Y);
+	std::vector<double> xc1, yc1, xc2, yc2;
+	Helper::Sum(kernel.mul(X), xc1, ALL_SUM);
+	Helper::Sum(kernel.mul(Y), yc1, ALL_SUM);
+	xc2.push_back((kernel.cols+1)/ 2.0) ;
+	yc2.push_back((kernel.rows+1)/ 2.0) ;
+	double xshift = cvRound(xc2[0] - xc1[0]);
+	double yshift = cvRound(yc2[0] - yc1[0]);
+	cv::Mat M = cv::Mat::zeros(2,3,CV_64F);
+	M.at<double>(0,0) = 1; 
+	M.at<double>(0,2) = -xshift;
+	M.at<double>(1,1) = 1; 
+	M.at<double>(1,2) = -yshift; 
+	Helper::warpimage(kernel, M, adjusted);
 }
