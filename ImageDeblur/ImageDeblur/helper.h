@@ -1,0 +1,33 @@
+#ifndef HELPER_H
+#define HELPER_H
+
+#include "common.h"
+
+#define COL_SUM 1
+#define ROW_SUM 2
+#define ALL_SUM 3
+
+
+class Helper
+{
+public:
+	static void setOpts(struct Opts& opts,
+		                double prescale0 = 1, int xk_iter0 = 5,
+		                double gamma_correct0 = 1.0, int k_thresh0 = 20,
+						int kernel_size0 = 23, int saturation0 = 0,
+						double lambda_pixel0 = 4e-3, double lambda_grad0 = 4e-3);
+	static void init_kernel(const int minsize, 
+		                    cv::Mat& kernel);
+	static void resizeKer(const double ret,
+		                  const int k1, 
+						  const int k2, 
+						  cv::Mat& kernel);
+	static void fixsize(const int nk1,
+		                const int nk2,
+						cv::Mat& kernel);
+	static void Sum(const cv::Mat src, 		            
+				    std::vector<double>& result,
+					const int flag = ROW_SUM);
+};
+
+#endif
