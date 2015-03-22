@@ -5,7 +5,7 @@
 #pragma warning(disable : 4996)
 
 #include <opencv2/opencv.hpp>
-
+#include <limits>
 #define CV_VER CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
 #ifdef _DEBUG
 #define MY_LIB(name) name "d"

@@ -278,16 +278,20 @@ void Helper::estimate_psf(const cv::Mat blurred_x,
 {
 	/*assume their size are equal*/
 	cv::Mat latent_xf;
-	cv::Mat latent_xf_RI[] = {cv::Mat_<float>(latent_x), cv::Mat::zeros(latent_x.size(), CV_32F)};
+	cv::Mat latent_xf_RI[] = {cv::Mat_<float>(latent_x), 
+		                      cv::Mat::zeros(latent_x.size(), CV_32F)};
 	/*---------------------------*/
 	cv::Mat latent_yf;
-	cv::Mat latent_yf_RI[] = {cv::Mat_<float>(latent_y), cv::Mat::zeros(latent_y.size(), CV_32F)};
+	cv::Mat latent_yf_RI[] = {cv::Mat_<float>(latent_y), 
+		                      cv::Mat::zeros(latent_y.size(), CV_32F)};
 	/*---------------------------*/
 	cv::Mat blurred_xf;
-	cv::Mat blurred_xf_RI[] = {cv::Mat_<float>(blurred_x), cv::Mat::zeros(blurred_x.size(), CV_32F)};
+	cv::Mat blurred_xf_RI[] = {cv::Mat_<float>(blurred_x), 
+		                       cv::Mat::zeros(blurred_x.size(), CV_32F)};
 	/*---------------------------*/
 	cv::Mat blurred_yf;
-	cv::Mat blurred_yf_RI[] = {cv::Mat_<float>(blurred_y), cv::Mat::zeros(blurred_y.size(), CV_32F)};
+	cv::Mat blurred_yf_RI[] = {cv::Mat_<float>(blurred_y), 
+		                       cv::Mat::zeros(blurred_y.size(), CV_32F)};
 	/*---------------------------*/
 	cv::dft(latent_x, latent_xf, cv::DFT_COMPLEX_OUTPUT);
 	cv::dft(latent_y, latent_yf, cv::DFT_COMPLEX_OUTPUT);
@@ -299,4 +303,99 @@ void Helper::estimate_psf(const cv::Mat blurred_x,
 	cv::split(blurred_xf, blurred_xf_RI);
 	cv::split(blurred_yf, blurred_yf_RI);
 	/*----------------------------*/
+	cv::Mat latent_xf_RI_Conj[] = {cv::Mat_<float>(latent_x), 
+		                           cv::Mat::zeros(latent_x.size(), CV_32F)};
+	cv::Mat latent_xf_Conj;
+	cv::merge(latent_xf_RI_Conj, 2, latent_xf_Conj);
+
+	cv::Mat latent_yf_RI_Conj[] = {cv::Mat_<float>(latent_y), 
+		                           cv::Mat::zeros(latent_y.size(), CV_32F)};
+	cv::Mat latent_yf_Conj;
+	cv::merge(latent_yf_RI_Conj, 2, latent_yf_Conj);
+	/*----------------------------*/
+	latent_xf_RI_Conj[0] = latent_xf_RI[0];
+	latent_xf_RI_Conj[1] = -latent_xf_RI[1];
+	latent_yf_RI_Conj[0] = latent_yf_RI[0];
+	latent_yf_RI_Conj[1] = -latent_yf_RI[1];
+	/*----------------------------*/
+	cv::Mat b_f = latent_xf_Conj.mul(blurred_xf) + 
+		          latent_yf_Conj.mul(blurred_yf);
+}
+
+
+void Helper::shift(const cv::Mat& src, 
+                   cv::Mat& dst, 
+	               cv::Point2f delta, 
+	               int fill, 
+	               cv::Scalar value)
+{
+
+	// error checking
+	// assert(fabs(delta.x) < src.cols && fabs(delta.y) < src.rows);
+
+	// split the shift into integer and subpixel components
+	cv::Point2i deltai(ceil(delta.x), ceil(delta.y));
+	cv::Point2f deltasub(fabs(delta.x - deltai.x), fabs(delta.y - deltai.y));
+
+	// INTEGER SHIFT
+	// first create a border around the parts of the Mat that will be exposed
+	int t = 0, b = 0, l = 0, r = 0;
+	if (deltai.x > 0) l =  deltai.x;
+	if (deltai.x < 0) r = -deltai.x;
+	if (deltai.y > 0) t =  deltai.y;
+	if (deltai.y < 0) b = -deltai.y;
+	cv::Mat padded;
+	cv::copyMakeBorder(src, padded, t, b, l, r, fill, value);
+
+	// SUBPIXEL SHIFT
+	float eps = std::numeric_limits<float>::epsilon();
+	if (deltasub.x > eps || deltasub.y > eps) {
+		switch (src.depth()) {
+		case CV_32F:
+			{
+				cv::Matx<float, 1, 2> dx(1-deltasub.x, deltasub.x);
+				cv::Matx<float, 2, 1> dy(1-deltasub.y, deltasub.y);
+				sepFilter2D(padded, padded, -1, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
+				break;
+			}
+		case CV_64F:
+			{
+				cv::Matx<double, 1, 2> dx(1-deltasub.x, deltasub.x);
+				cv::Matx<double, 2, 1> dy(1-deltasub.y, deltasub.y);
+				sepFilter2D(padded, padded, -1, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
+				break;
+			}
+		default:
+			{
+				cv::Matx<float, 1, 2> dx(1-deltasub.x, deltasub.x);
+				cv::Matx<float, 2, 1> dy(1-deltasub.y, deltasub.y);
+				padded.convertTo(padded, CV_32F);
+				sepFilter2D(padded, padded, CV_32F, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
+				break;
+			}
+		}
+	}
+
+	// construct the region of interest around the new matrix
+	cv::Rect roi = cv::Rect(std::max(-deltai.x,0),std::max(-deltai.y,0),0,0) + src.size();
+	dst = padded(roi);
+}
+
+void Helper::psf2otf(const cv::Mat psf, 
+	                 const cv::Size size,
+	                 cv::Mat& otf)
+{
+	/*assume that all the elements are non-zero*/
+	/*without padding*/
+	cv::Mat t_psf;
+	Helper::shift(psf, t_psf, cv::Point2f(-(psf.size().width-1)/2, -(psf.size().height-1)/2));
+	cv::dft(t_psf, otf, cv::DFT_REAL_OUTPUT);
+}
+
+
+void Helper::circshift(const cv::Mat& src,
+	                   const cv::Size size,
+	                   cv::Mat& dst)
+{
+
 }
