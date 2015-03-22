@@ -48,6 +48,9 @@ int main(void)
 	im.at<double>(2,1) = 4;
 	im.at<double>(2,2) = 5;
 	Helper::warpProjective2(im, A, result);
+	img.convertTo(img, CV_32F);
+	Helper::estimate_psf(img,img, img,img, 1,1,result);
+	std::cout<< img.rows<<" "<< img.cols<< std::endl;
 	cv::waitKey();
 	return 0;
 }

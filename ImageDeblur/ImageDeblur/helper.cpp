@@ -267,3 +267,36 @@ void Helper::adjust_psf_center(const cv::Mat kernel,
 	M.at<double>(1,2) = -yshift; 
 	Helper::warpimage(kernel, M, adjusted);
 }
+
+void Helper::estimate_psf(const cv::Mat blurred_x,
+	                      const cv::Mat blurred_y,
+	                      const cv::Mat latent_x,
+	                      const cv::Mat latent_y,
+	                      const double weight,
+	                      const int psf_size,
+	                      cv::Mat& psf)
+{
+	/*assume their size are equal*/
+	cv::Mat latent_xf;
+	cv::Mat latent_xf_RI[] = {cv::Mat_<float>(latent_x), cv::Mat::zeros(latent_x.size(), CV_32F)};
+	/*---------------------------*/
+	cv::Mat latent_yf;
+	cv::Mat latent_yf_RI[] = {cv::Mat_<float>(latent_y), cv::Mat::zeros(latent_y.size(), CV_32F)};
+	/*---------------------------*/
+	cv::Mat blurred_xf;
+	cv::Mat blurred_xf_RI[] = {cv::Mat_<float>(blurred_x), cv::Mat::zeros(blurred_x.size(), CV_32F)};
+	/*---------------------------*/
+	cv::Mat blurred_yf;
+	cv::Mat blurred_yf_RI[] = {cv::Mat_<float>(blurred_y), cv::Mat::zeros(blurred_y.size(), CV_32F)};
+	/*---------------------------*/
+	cv::dft(latent_x, latent_xf, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(latent_y, latent_yf, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(blurred_x, blurred_xf, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(blurred_y, blurred_yf, cv::DFT_COMPLEX_OUTPUT);
+	/*-----------split-----------*/
+	cv::split(latent_xf, latent_xf_RI);
+	cv::split(latent_yf, latent_yf_RI);
+	cv::split(blurred_xf, blurred_xf_RI);
+	cv::split(blurred_yf, blurred_yf_RI);
+	/*----------------------------*/
+}

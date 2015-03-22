@@ -40,6 +40,13 @@ public:
 						  cv::Mat& warped);
 	static void adjust_psf_center(const cv::Mat kernel,
 		                          cv::Mat& adjusted);
+	static void estimate_psf(const cv::Mat blurred_x,
+		                     const cv::Mat blurred_y,
+							 const cv::Mat latent_x,
+							 const cv::Mat latent_y,
+							 const double weight,
+							 const int psf_size,
+							 cv::Mat& psf);
 };
 
 #endif
