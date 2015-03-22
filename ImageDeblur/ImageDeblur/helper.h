@@ -47,11 +47,6 @@ public:
 							 const double weight,
 							 const int psf_size,
 							 cv::Mat& psf);
-	static void shift(const cv::Mat& src, 
-		              cv::Mat& dst, 
-					  cv::Point2f delta, 
-					  int fill = cv::BORDER_CONSTANT, 
-					  cv::Scalar value = cv::Scalar(0,0,0,0));
 	static void circshift(const cv::Mat& src,
 		                  const cv::Size size,
 						  cv::Mat& dst);
@@ -60,7 +55,7 @@ public:
 						cv::Mat& otf);
 	static void otf2psf(const cv::Mat otf,
 		                const cv::Size size,
-						cv::Mat& psf);
+						cv::Mat& psf); 
 };
 
 #endif
