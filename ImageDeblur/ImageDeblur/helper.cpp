@@ -323,79 +323,75 @@ void Helper::estimate_psf(const cv::Mat blurred_x,
 }
 
 
-void Helper::shift(const cv::Mat& src, 
-                   cv::Mat& dst, 
-	               cv::Point2f delta, 
-	               int fill, 
-	               cv::Scalar value)
-{
-
-	// error checking
-	// assert(fabs(delta.x) < src.cols && fabs(delta.y) < src.rows);
-
-	// split the shift into integer and subpixel components
-	cv::Point2i deltai(ceil(delta.x), ceil(delta.y));
-	cv::Point2f deltasub(fabs(delta.x - deltai.x), fabs(delta.y - deltai.y));
-
-	// INTEGER SHIFT
-	// first create a border around the parts of the Mat that will be exposed
-	int t = 0, b = 0, l = 0, r = 0;
-	if (deltai.x > 0) l =  deltai.x;
-	if (deltai.x < 0) r = -deltai.x;
-	if (deltai.y > 0) t =  deltai.y;
-	if (deltai.y < 0) b = -deltai.y;
-	cv::Mat padded;
-	cv::copyMakeBorder(src, padded, t, b, l, r, fill, value);
-
-	// SUBPIXEL SHIFT
-	float eps = std::numeric_limits<float>::epsilon();
-	if (deltasub.x > eps || deltasub.y > eps) {
-		switch (src.depth()) {
-		case CV_32F:
-			{
-				cv::Matx<float, 1, 2> dx(1-deltasub.x, deltasub.x);
-				cv::Matx<float, 2, 1> dy(1-deltasub.y, deltasub.y);
-				sepFilter2D(padded, padded, -1, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
-				break;
-			}
-		case CV_64F:
-			{
-				cv::Matx<double, 1, 2> dx(1-deltasub.x, deltasub.x);
-				cv::Matx<double, 2, 1> dy(1-deltasub.y, deltasub.y);
-				sepFilter2D(padded, padded, -1, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
-				break;
-			}
-		default:
-			{
-				cv::Matx<float, 1, 2> dx(1-deltasub.x, deltasub.x);
-				cv::Matx<float, 2, 1> dy(1-deltasub.y, deltasub.y);
-				padded.convertTo(padded, CV_32F);
-				sepFilter2D(padded, padded, CV_32F, dx, dy, cv::Point(0,0), 0, cv::BORDER_CONSTANT);
-				break;
-			}
-		}
-	}
-
-	// construct the region of interest around the new matrix
-	cv::Rect roi = cv::Rect(std::max(-deltai.x,0),std::max(-deltai.y,0),0,0) + src.size();
-	dst = padded(roi);
-}
-
 void Helper::psf2otf(const cv::Mat psf, 
 	                 const cv::Size size,
 	                 cv::Mat& otf)
 {
 	/*assume that all the elements are non-zero*/
-	/*without padding*/
-	cv::Mat t_psf;
-	Helper::shift(psf, t_psf, cv::Point2f(-(psf.size().width-1)/2, -(psf.size().height-1)/2));
-	cv::dft(t_psf, otf, cv::DFT_REAL_OUTPUT);
+	/*should padding*/
+	int R = (size.height - psf.cols)/2;
+	int C = (size.width - psf.rows)/2;
+	cv::Mat t_psf = cv::Mat::zeros(size, CV_32F);
+	psf.copyTo(t_psf(cv::Range(R,t_psf.rows-R),cv::Range(C,t_psf.cols-C)));
+	Helper::circshift(t_psf,cv::Size(-size.width/2,-size.height/2),t_psf);
+	cv::dft(t_psf, otf, cv::DFT_COMPLEX_OUTPUT);
 }
 
+void Helper::otf2psf(const cv::Mat otf,
+	                 const cv::Size size,
+	                 cv::Mat& psf)
+{
+	/*assume that all the elements are non-zero*/
+	/*without padding*/
+	int R = (size.height - psf.cols)/2;
+	int C = (size.width - psf.rows)/2;
+	cv::Mat t_otf = cv::Mat::zeros(size, CV_32F);
+	otf.copyTo(t_otf(cv::Range(R,t_otf.rows-R),cv::Range(C,t_otf.cols-C)));
+	cv::dft(t_otf, psf, cv::DFT_INVERSE|cv::DFT_SCALE);
+	Helper::circshift(psf, cv::Size(size.width/2,size.height/2),psf);
+}
 
 void Helper::circshift(const cv::Mat& src,
 	                   const cv::Size size,
 	                   cv::Mat& dst)
 {
-
+	cv::Mat t_src = src.clone();
+	dst = src.clone();
+	/*----------?----------*/
+	int R = size.height % src.rows;
+	int C = size.width  % src.cols;
+	int rows = src.rows;
+	int cols = src.cols;
+	/*---------------------*/
+	if (R > 0) {
+		for (int i = 0; i < rows; ++i)
+		{
+		    t_src(cv::Range((i+R)%rows,(i+R)%rows+1), cv::Range(0,cols)).
+				copyTo(dst(cv::Range(i,i+1),cv::Range(0,cols)));
+		}
+	} else {
+		for (int i = 0; i < rows; ++i)
+		{
+		    t_src(cv::Range((i+rows+R)%rows,(i+rows+R)%rows+1), cv::Range(0,cols)).
+				copyTo(dst(cv::Range(i,i+1),cv::Range(0,cols)));
+		}
+	}
+	/*--------------------*/
+	t_src = dst.t();
+	dst   = dst.t();
+	if (C > 0) {
+		for (int i = 0; i < cols; ++i)
+		{
+			t_src(cv::Range((i+C)%cols,(i+C)%cols+1), cv::Range(0,rows)).
+				copyTo(dst(cv::Range(i,i+1),cv::Range(0,rows)));
+		}
+	} else {
+		for (int i = 0; i < cols; ++i)
+		{
+			t_src(cv::Range((i+cols+C)%cols,(i+cols+C)%cols+1), cv::Range(0,rows)).
+				copyTo(dst(cv::Range(i,i+1),cv::Range(0,rows)));
+		}
+	}
+	/*--------------------*/
+	dst = dst.t();
 }

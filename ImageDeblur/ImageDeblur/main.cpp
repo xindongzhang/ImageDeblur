@@ -56,8 +56,8 @@ int main(void)
 	psf.at<float>(0,0) = 1;
 	psf.at<float>(0,1) = 2;
 	psf.at<float>(1,0) = 3;
-	psf.at<float>(0,1) = 4;
-	Helper::psf2otf(psf,cv::Size(2,2),otf);
+	psf.at<float>(1,1) = 4;
+	Helper::otf2psf(psf,cv::Size(2,2),otf);
 	for (int i = 0; i < otf.rows; ++i)
 	{
 		for (int j = 0; j < otf.cols; ++j)
@@ -69,7 +69,6 @@ int main(void)
 			}
 		}
 	}
-	std::cout<< otf.dims<< std::endl;
 	cv::waitKey();
 	return 0;
 }
