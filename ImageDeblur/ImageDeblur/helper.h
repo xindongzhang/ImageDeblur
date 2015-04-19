@@ -55,7 +55,14 @@ public:
 						cv::Mat& otf);
 	static void otf2psf(const cv::Mat otf,
 		                const cv::Size size,
-						cv::Mat& psf); 
+						cv::Mat& psf);
+	static void printMat(const cv::Mat& matrix);
+	static void kernel_solver(const cv::Mat& yx,
+		                      const cv::Mat& yy,
+		                      const cv::Mat& xx,
+							  const cv::Mat& xy,
+							  cv::Mat& kernel);
+
 };
 
 #endif

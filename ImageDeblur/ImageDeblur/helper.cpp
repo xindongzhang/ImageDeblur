@@ -23,9 +23,9 @@ void Helper::init_kernel(const int minsize, cv::Mat& kernel)
 		std::cout<< "the minsize must be odd number!"<< std::endl;
 		return;
 	}
-	kernel = cv::Mat::zeros(minsize, minsize, CV_64F);
-	kernel.at<double>((minsize-1)/2, (minsize-1)/2) = 0.5;
-	kernel.at<double>((minsize-1)/2, (minsize-1)/2 + 1) = 0.5;
+	kernel = cv::Mat::zeros(minsize, minsize, CV_32F);
+	kernel.at<float>((minsize-1)/2, (minsize-1)/2) = 0.5;
+	kernel.at<float>((minsize-1)/2, (minsize-1)/2 + 1) = 0.5;
 }
 
 void Helper::fixsize(const int nk1,
@@ -56,11 +56,11 @@ void Helper::fixsize(const int nk1,
 			std::vector<double> s;
 			Helper::Sum(kernel, s, 2);
 			if ( *s.begin() < *(s.end()-1) ){
-				cv::Mat tk = cv::Mat::zeros(k1+1, kernel.cols, CV_64F);
+				cv::Mat tk = cv::Mat::zeros(k1+1, kernel.cols, CV_32F);
 				tk(cv::Range(0,k1),cv::Range(0, tk.cols)) = kernel;
 				kernel = tk;
 			} else {
-				cv::Mat tk = cv::Mat::zeros(k1+1, kernel.cols, CV_64F);
+				cv::Mat tk = cv::Mat::zeros(k1+1, kernel.cols, CV_32F);
 				tk(cv::Range(1,k1+1),cv::Range(0, tk.cols)) = kernel;
 				kernel = tk;
 			} 
@@ -82,11 +82,11 @@ void Helper::fixsize(const int nk1,
 			std::vector<double> s;
 			Helper::Sum(kernel, s, 1);
 			if (*s.begin() < *(s.end()-1)) {
-				cv::Mat tk = cv::Mat::zeros(kernel.rows, k2+1,CV_64F);
+				cv::Mat tk = cv::Mat::zeros(kernel.rows, k2+1,CV_32F);
 				tk(cv::Range(0,tk.rows),cv::Range(0,k2)) = kernel;
 				kernel = tk;
 			} else {
-				cv::Mat tk = cv::Mat::zeros(kernel.rows, k2+1,CV_64F);
+				cv::Mat tk = cv::Mat::zeros(kernel.rows, k2+1,CV_32F);
 				tk(cv::Range(0,tk.rows),cv::Range(1,k2+1)) = kernel;
 				kernel = tk;
 			}
@@ -116,7 +116,7 @@ void Helper::Sum(const cv::Mat src,
 			tmp_sum = 0.0;
 			for (int j = 0; j < src.cols; ++j)
 			{
-				tmp_sum += src.at<double>(i,j);
+				tmp_sum += src.at<float>(i,j);
 			}
 			result.push_back(tmp_sum);
 		}
@@ -131,7 +131,7 @@ void Helper::Sum(const cv::Mat src,
 			tmp_sum = 0.0;
 			for (int i = 0; i < src.rows; ++i)
 			{
-				tmp_sum +=src.at<double>(i,j);
+				tmp_sum +=src.at<float>(i,j);
 			}
 			result.push_back(tmp_sum);
 		}
@@ -145,7 +145,7 @@ void Helper::Sum(const cv::Mat src,
 		{
 			for (int j = 0; j < src.cols; ++j)
 			{
-				tmp_sum += src.at<double>(i,j);
+				tmp_sum += src.at<float>(i,j);
 			}
 		}
 		result.push_back(tmp_sum);
@@ -182,14 +182,14 @@ void Helper::MeshGrid(const int Xsize,
 		return;
 	}
 
-	XMat = cv::Mat::zeros(Ysize, Xsize, CV_64F);
-	YMat = cv::Mat::zeros(Ysize, Xsize, CV_64F);
+	XMat = cv::Mat::zeros(Ysize, Xsize, CV_32F);
+	YMat = cv::Mat::zeros(Ysize, Xsize, CV_32F);
 	for (int i = 0; i < Ysize; ++i)
 	{
 		for (int j = 0; j < Xsize; ++j)
 		{
-			XMat.at<double>(i,j) = j+1;
-			YMat.at<double>(i,j) = i+1;
+			XMat.at<float>(i,j) = j+1;
+			YMat.at<float>(i,j) = i+1;
 		}
 	}
 }
@@ -203,33 +203,33 @@ void Helper::warpProjective2(const cv::Mat img,
 	}
 	cv::Mat x,y;
 	Helper::MeshGrid(img.cols, img.rows, x, y);
-	cv::Mat homogeneousCoords = cv::Mat::zeros(3, x.rows*x.cols, CV_64F);
+	cv::Mat homogeneousCoords = cv::Mat::zeros(3, x.rows*x.cols, CV_32F);
 	for (int i = 0; i < 3; ++i)
 	{
 		for (int j = 0; j < x.rows*x.cols; ++j)
 		{
 			if (i == 0){
-				homogeneousCoords.at<double>(i,j) = x.at<double>( (j)%x.cols, std::floor(double(j)/x.rows));
+				homogeneousCoords.at<float>(i,j) = x.at<float>( (j)%x.cols, std::floor(float(j)/x.rows));
 			} 
 			if (i == 1){
-				homogeneousCoords.at<double>(i,j) = y.at<double>( (j)%y.cols, std::floor(double(j)/y.rows));
+				homogeneousCoords.at<float>(i,j) = y.at<float>( (j)%y.cols, std::floor(float(j)/y.rows));
 			}
 			if (i == 2){
-				homogeneousCoords.at<double>(i,j) = 1.0;
+				homogeneousCoords.at<float>(i,j) = 1.0;
 			}
 		}
 	}
 	/*------------------------*/
 	cv::Mat warpedCoords = A * homogeneousCoords;
-	cv::Mat xprime = cv::Mat::zeros(img.size(), CV_64F);// = warpedCoords(cv::Range(0,1),cv::Range(0,warpedCoords.cols));
-	cv::Mat yprime = cv::Mat::zeros(img.size(), CV_64F);// = warpedCoords(cv::Range(1,2),cv::Range(0,warpedCoords.cols));
+	cv::Mat xprime = cv::Mat::zeros(img.size(), CV_32F);// = warpedCoords(cv::Range(0,1),cv::Range(0,warpedCoords.cols));
+	cv::Mat yprime = cv::Mat::zeros(img.size(), CV_32F);// = warpedCoords(cv::Range(1,2),cv::Range(0,warpedCoords.cols));
 
 	for (int i = 0; i < warpedCoords.cols; ++i)
 	{
 		int R = (i)%img.cols;
 		int C = std::floor(double(i)/img.rows);
-		xprime.at<double>(R,C) = warpedCoords.at<double>(0, i);
-		yprime.at<double>(R,C) = warpedCoords.at<double>(1, i);
+		xprime.at<float>(R,C) = warpedCoords.at<float>(0, i);
+		yprime.at<float>(R,C) = warpedCoords.at<float>(1, i);
 	}
 
 	xprime.convertTo(xprime, CV_32F);
@@ -260,7 +260,7 @@ void Helper::adjust_psf_center(const cv::Mat kernel,
 	yc2.push_back((kernel.rows+1)/ 2.0) ;
 	double xshift = cvRound(xc2[0] - xc1[0]);
 	double yshift = cvRound(yc2[0] - yc1[0]);
-	cv::Mat M = cv::Mat::zeros(2,3,CV_64F);
+	cv::Mat M = cv::Mat::zeros(2,3,CV_32F);
 	M.at<double>(0,0) = 1; 
 	M.at<double>(0,2) = -xshift;
 	M.at<double>(1,1) = 1; 
@@ -324,8 +324,8 @@ void Helper::estimate_psf(const cv::Mat blurred_x,
 
 
 void Helper::psf2otf(const cv::Mat psf, 
-	                 const cv::Size size,
-	                 cv::Mat& otf)
+	                     const cv::Size size,
+	                     cv::Mat& otf)
 {
 	/*assume that all the elements are non-zero*/
 	/*should padding*/
@@ -334,8 +334,27 @@ void Helper::psf2otf(const cv::Mat psf,
 	cv::Mat t_psf = cv::Mat::zeros(size, CV_32F);
 	psf.copyTo(t_psf(cv::Range(R,t_psf.rows-R),cv::Range(C,t_psf.cols-C)));
 	Helper::circshift(t_psf,cv::Size(-size.width/2,-size.height/2),t_psf);
-	cv::dft(t_psf, otf, cv::DFT_COMPLEX_OUTPUT);
+	cv::Mat planes[] = {t_psf, cv::Mat::zeros(size, CV_32F)};
+	cv::merge(planes, 2, otf);
+	cv::dft(otf, otf, cv::DFT_COMPLEX_OUTPUT);
 }
+
+//void Helper::otf2psf(const cv::Mat otf,
+//	                 const cv::Size size,
+//	                 cv::Mat& psf)
+//{
+//	/*assume that all the elements are non-zero*/
+//	/*without padding*/
+//	int R = (size.height - psf.cols)/2;
+//	int C = (size.width - psf.rows)/2;
+//	cv::Mat t_psf;
+//	cv::Mat otf_planes[] = {otf, cv::Mat::zeros(otf.size(), CV_32F)};
+//	cv::Mat t_otf;
+//	cv::merge(otf_planes, 2, t_otf);
+//	cv::idft(t_otf, t_psf, cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
+//	Helper::circshift(t_psf, cv::Size(size.width/2,size.height/2), t_psf);
+//	t_psf(cv::Rect(0,0,size.height,size.width)).copyTo(psf);
+//}
 
 void Helper::otf2psf(const cv::Mat otf,
 	                 const cv::Size size,
@@ -345,10 +364,10 @@ void Helper::otf2psf(const cv::Mat otf,
 	/*without padding*/
 	int R = (size.height - psf.cols)/2;
 	int C = (size.width - psf.rows)/2;
-	cv::Mat t_otf = cv::Mat::zeros(size, CV_32F);
-	otf.copyTo(t_otf(cv::Range(R,t_otf.rows-R),cv::Range(C,t_otf.cols-C)));
-	cv::dft(t_otf, psf, cv::DFT_INVERSE|cv::DFT_SCALE);
-	Helper::circshift(psf, cv::Size(size.width/2,size.height/2),psf);
+	cv::Mat t_psf;
+	cv::idft(otf, t_psf, cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
+	Helper::circshift(t_psf, cv::Size(size.width/2,size.height/2), t_psf);
+	t_psf(cv::Rect(0,0,size.height,size.width)).copyTo(psf);
 }
 
 void Helper::circshift(const cv::Mat& src,
@@ -366,8 +385,10 @@ void Helper::circshift(const cv::Mat& src,
 	if (R > 0) {
 		for (int i = 0; i < rows; ++i)
 		{
-		    t_src(cv::Range((i+R)%rows,(i+R)%rows+1), cv::Range(0,cols)).
-				copyTo(dst(cv::Range(i,i+1),cv::Range(0,cols)));
+		  //  t_src(cv::Range((i+R)%rows,(i+R)%rows+1), cv::Range(0,cols)).
+				//copyTo(dst(cv::Range(i,i+1),cv::Range(0,cols)));
+			t_src(cv::Range(i,i+1), cv::Range(0,cols)).
+				copyTo(dst(cv::Range((i+R)%rows,(i+R)%rows+1),cv::Range(0,cols)));
 		}
 	} else {
 		for (int i = 0; i < rows; ++i)
@@ -382,8 +403,10 @@ void Helper::circshift(const cv::Mat& src,
 	if (C > 0) {
 		for (int i = 0; i < cols; ++i)
 		{
-			t_src(cv::Range((i+C)%cols,(i+C)%cols+1), cv::Range(0,rows)).
-				copyTo(dst(cv::Range(i,i+1),cv::Range(0,rows)));
+			//t_src(cv::Range((i+C)%cols,(i+C)%cols+1), cv::Range(0,rows)).
+			//	copyTo(dst(cv::Range(i,i+1),cv::Range(0,rows)));
+			t_src(cv::Range(i,i+1), cv::Range(0,rows)).
+				copyTo(dst(cv::Range((i+C)%cols,(i+C)%cols+1),cv::Range(0,rows)));
 		}
 	} else {
 		for (int i = 0; i < cols; ++i)
@@ -394,4 +417,66 @@ void Helper::circshift(const cv::Mat& src,
 	}
 	/*--------------------*/
 	dst = dst.t();
+}
+
+
+void Helper::printMat(const cv::Mat& matrix)
+{
+	for (int i = 0; i < matrix.rows; ++i)
+	{
+		for (int j = 0; j < matrix.cols; ++j)
+		{
+			std::cout<< matrix.at<float>(i, j)<< " ";
+			if (j == matrix.cols-1)
+				std::cout<< std::endl;
+		}
+	}
+}
+
+
+void Helper::kernel_solver(const cv::Mat& yx,
+	                       const cv::Mat& yy,
+	                       const cv::Mat& xx, 
+						   const cv::Mat& xy,
+						   cv::Mat& kernel)
+{
+	double lambda   = 0.001;
+	cv::Mat FFTyx, FFTyy, FFTxx, FFTxy;
+	cv::Mat yx_planes[] = {yx, cv::Mat::zeros(yx.size(), CV_32F)};
+	cv::Mat yy_planes[] = {yy, cv::Mat::zeros(yy.size(), CV_32F)};
+	cv::Mat xx_planes[] = {xx, cv::Mat::zeros(xx.size(), CV_32F)};
+	cv::Mat xy_planes[] = {xy, cv::Mat::zeros(xy.size(), CV_32F)};
+	cv::merge(yx_planes, 2, FFTyx);
+	cv::merge(yy_planes, 2, FFTyy);
+	cv::merge(xx_planes, 2, FFTxx);
+	cv::merge(xy_planes, 2, FFTxy);
+	cv::dft(FFTyx, FFTyx, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(FFTyy, FFTyy, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(FFTxx, FFTxx, cv::DFT_COMPLEX_OUTPUT);
+	cv::dft(FFTxy, FFTxy, cv::DFT_COMPLEX_OUTPUT);
+	/*-------------------------*/
+	cv::Mat Ak, bk, KK;
+	cv::Mat xx_grat, xy_grat;
+	cv::mulSpectrums(FFTxx, FFTxx, xx_grat, cv::DFT_REAL_OUTPUT, true);
+	cv::mulSpectrums(FFTxy, FFTxy, xy_grat, cv::DFT_REAL_OUTPUT, true);
+	cv::add(xx_grat, xy_grat, Ak);
+	Ak = Ak + lambda;
+	/*-------------------------*/
+	cv::Mat conjFFTxx, conjFFTxy;
+	cv::Mat FFTxx_planes[] = {cv::Mat::zeros(FFTxx.size(),CV_32F),
+	                          cv::Mat::zeros(FFTxx.size(),CV_32F)};
+	cv::Mat FFTxy_planes[] = {cv::Mat::zeros(FFTxy.size(),CV_32F),
+		                      cv::Mat::zeros(FFTxy.size(),CV_32F)};
+	cv::split(FFTxx, FFTxx_planes);
+	FFTxx_planes[1] = -FFTxx_planes[1];
+	cv::split(FFTxy, FFTxy_planes);
+	FFTxy_planes[1] = -FFTxy_planes[1];
+	cv::merge(FFTxx_planes, 2, conjFFTxx);
+	cv::merge(FFTxy_planes, 2, conjFFTxy);
+	cv::add(conjFFTxx.mul(FFTyx), conjFFTxy.mul(FFTyy), bk);
+	/*--------------------------*/
+	cv::divide(bk, Ak, KK);
+	Helper::otf2psf(KK, kernel.size(), kernel);
+	float SUM = cv::sum(kernel).val[0];
+	kernel = kernel.mul(1.0/SUM);
 }
