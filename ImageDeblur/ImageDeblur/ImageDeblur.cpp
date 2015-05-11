@@ -224,7 +224,7 @@ void ImageDeblur::blind_deblur_aniso(const cv::Mat& blur,
 									 cv::Mat& latent)
 {
 	double beta = 1.0 / lambda;
-	double beta_min = 0.001;
+	double beta_min = 10;//0.001
 	cv::Mat I = blur.clone();
 	cv::Mat Nomin1, Denom1, Denom2, Denom;
 	this->computeDenominator(I, kernel, Nomin1, Denom1, Denom2);
@@ -273,16 +273,18 @@ void ImageDeblur::blind_deblur_aniso(const cv::Mat& blur,
 		cv::Mat fftWxx_plane[] = {Wxx, cv::Mat::zeros(Wxx.size(), CV_32F)};
 		cv::merge(fftWxx_plane, 2, fftWxx);
 		cv::dft(fftWxx, fftWxx, cv::DFT_COMPLEX_OUTPUT);
-		cv::Mat plane[] = {Nomin1, cv::Mat::zeros(Nomin1.size(), CV_32F)};
-		cv::merge(plane, 2, Nomin1);
+		//cv::Mat plane[] = {Nomin1, cv::Mat::zeros(Nomin1.size(), CV_32F)};
+		//cv::merge(plane, 2, Nomin1);
 		cv::add(Nomin1, gamma*fftWxx, Fyout);
-		cv::Mat plane1[] = {Denom, cv::Mat::zeros(Denom.size(), CV_32F)};
-		cv::merge(plane1, 2, Denom);
+		//cv::Mat plane1[] = {Denom, cv::Mat::zeros(Denom.size(), CV_32F)};
+		//cv::merge(plane1, 2, Denom);
 		cv::divide(Fyout, Denom, Fyout);
 		cv::idft(Fyout, I, cv::DFT_REAL_OUTPUT|cv::DFT_SCALE);
 		/*--------------*/
 		cv::filter2D(I, Ix, CV_32F, dx, cv::Point(0, 0), 0.0, cv::BORDER_REFLECT);
 		cv::filter2D(I, Iy, CV_32F, dy, cv::Point(0, 0), 0.0, cv::BORDER_REFLECT);
+		beta = beta * 0.5;
+		std::cout<< beta<< std::endl;
 	}
 	latent = I.clone();
 }
@@ -301,7 +303,14 @@ void ImageDeblur::computeDenominator(const cv::Mat& blur,
 	cv::Mat blur_plane[] = {t_blur, cv::Mat::zeros(blur.size(), CV_32F)};
 	cv::merge(blur_plane, 2,FFTblur);
 	cv::dft(FFTblur, FFTblur, cv::DFT_COMPLEX_OUTPUT);
+	/*------------------*/
 	Helper::psf2otf(kernel, size, otfk);
+	std::vector<cv::Mat> planes;
+	cv::split(otfk, planes);
+	planes[1] = -planes[1];
+	cv::Mat conj_otfk;
+	cv::merge(planes, conj_otfk);
+	Nomin1 = conj_otfk.mul(FFTblur);
 	cv::mulSpectrums(otfk, otfk, Denom1, cv::DFT_REAL_OUTPUT, true);
 	/*------------------*/
 	cv::Mat dx = cv::Mat::zeros(1,2,CV_32F);
